@@ -1,0 +1,91 @@
+{
+    "comments": [
+        {
+            "color": "yellow",
+            "h": 284,
+            "text": "Connect your EV3 Brick and tap the download and run button in the upper right corner to run the program.",
+            "w": 444,
+            "x0": 0,
+            "y0": 150
+        },
+        {
+            "color": "yellow",
+            "h": 284,
+            "text": "You can change how far R3PTAR slithers by changing the Count input on the Loop block.",
+            "w": 444,
+            "x0": 470,
+            "y0": 150
+        }
+    ],
+    "sequences": [
+        {
+            "id": "seq8",
+            "steps": [
+                {
+                    "id": "8",
+                    "stype": "Start"
+                },
+                {
+                    "id": "13",
+                    "on": {
+                        "power": 75.0
+                    },
+                    "port": "B",
+                    "stype": "Large-Motor"
+                },
+                {
+                    "body": {
+                        "entry": {
+                            "id": "seq21",
+                            "steps": [
+                                {
+                                    "dur": {
+                                        "dtype": "time",
+                                        "seconds": 1.0
+                                    },
+                                    "id": "27",
+                                    "off": {
+                                        "brake": false
+                                    },
+                                    "on": {
+                                        "power": 10.0
+                                    },
+                                    "port": "A",
+                                    "stype": "Medium-Motor"
+                                },
+                                {
+                                    "dur": {
+                                        "dtype": "time",
+                                        "seconds": 1.0
+                                    },
+                                    "id": "30",
+                                    "off": {
+                                        "brake": false
+                                    },
+                                    "on": {
+                                        "power": -10.0
+                                    },
+                                    "port": "A",
+                                    "stype": "Medium-Motor"
+                                }
+                            ]
+                        },
+                        "exit_from": "seq21",
+                        "sequences": []
+                    },
+                    "hbot": 322.0,
+                    "htop": 106.0,
+                    "id": "15",
+                    "stype": "Loop",
+                    "until": {
+                        "count": 3,
+                        "ctype": "Count"
+                    },
+                    "w": 944.0
+                }
+            ],
+            "x0": 0,
+            "y0": -276
+        }
+    ]
+}
