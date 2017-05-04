@@ -94,6 +94,8 @@ module Ev3j
     def self.from_json_object(o)
       if o["stype"] == "Loop"
         LoopStep.from_json_object(o)
+      elsif o["stype"] == "Case-Switch"
+        CaseSwitchStep.from_json_object(o)
       else
         new(o)
       end
@@ -114,7 +116,7 @@ module Ev3j
 
     def self.from_json_object(o)
       bopts = o.delete("body")
-      body = LoopBody.new(bopts["sequences"], bopts["entry"], bopts["exit_from"])
+      body = LoopBody.from_json_object(bopts)
       new(o, body)
     end
 
@@ -130,6 +132,10 @@ module Ev3j
       @exit_from = exit_from
     end
 
+    def self.from_json_object(o)
+      new(o["sequences"], o["entry"], o["exit_from"])
+    end
+
     def json_hash
       {
         "entry"     => @entry.json_hash,
@@ -138,8 +144,8 @@ module Ev3j
       }
     end
 
-    def dump_rb(f)
-      @entry.dump_rb(f, "entry")
+    def dump_rb(f, keyword = "entry")
+      @entry.dump_rb(f, keyword)
       f.puts "exit_from #{@exit_from.inspect}"
     end
 
@@ -151,6 +157,30 @@ module Ev3j
       seq = RobotSequence.new(opts)
       seq.instance_eval(&block)
       @entry = seq
+    end
+  end
+
+  class CaseSwitchStep < RobotStep
+    def self.from_json_object(o)
+      cases = o.delete("cases").map do |c|
+        cwhen = c["when"]
+        cthen = LoopBody.from_json_object(c["then"])
+        [cwhen, cthen]
+      end
+      new(o, Hash[cases])
+    end
+
+    def initialize(opts, cases)
+      @opts = opts
+      @cases = cases
+    end
+
+    def dump_rb(f)
+      f.puts "case_switch(#{opts_to_s @opts}) do"
+      @cases.each do |cwhen, cthen|
+        cthen.dump_rb(f, "cwhen(#{cwhen}).opts")
+      end
+      f.puts "end"
     end
   end
 
