@@ -13,14 +13,27 @@ module Ev3j
     end
 
     def save_json(filename)
-      File.write(filename, JSON.pretty_generate(@p.json_hash))
+      @p.save_json(filename)
     end
   end
 
   class RobotProgram
-    def initialize
-      @comments = []
-      @sequences = []
+    def initialize(comments: [], sequences: [])
+      @comments = comments
+      @sequences = sequences
+    end
+
+    def save_json(filename)
+      File.write(filename, JSON.pretty_generate(json_hash))
+    end
+
+    def self.from_json_file(filename)
+      from_json_object(JSON.parse(File.read(filename)))
+    end
+
+    def self.from_json_object(o)
+      seqs = o["sequences"].map { |jseq| RobotSequence.from_json_object(jseq) }
+      new(comments: o["comments"], sequences: seqs)
     end
 
     def comment(text, opts = {})
@@ -42,10 +55,46 @@ module Ev3j
     end
   end
 
+  class RobotStep
+    def initialize(opts)
+      @opts = opts
+    end
+
+    def json_hash
+      @opts
+    end
+
+    def self.from_json_object(o)
+      if o["stype"] == "Loop"
+        LoopStep.from_json_object(o)
+      else
+        new(o)
+      end
+    end
+  end
+
+  class LoopStep < RobotStep
+    def initialize(opts, body)
+      @body = body
+      super(opts)
+    end
+
+    def self.from_json_object(o)
+      bopts = o.delete("body")
+      body = LoopBody.new(bopts["sequences"], bopts["entry"], bopts["exit_from"])
+      new(o, body)
+    end
+
+    def json_hash
+      @opts.merge("body" => @body.json_hash)
+    end
+  end
+
   class LoopBody
-    def initialize
-      @sequences = []
-      @exit_from = nil
+    def initialize(sequences = [], entry = {}, exit_from = nil)
+      @sequences = sequences
+      @entry     = RobotSequence.from_json_object(entry)
+      @exit_from = exit_from
     end
 
     def json_hash
@@ -68,13 +117,20 @@ module Ev3j
   end
 
   class RobotSequence
-    def initialize(opts)
+    def initialize(opts, steps: [])
       @opts = opts
-      @steps = []
+      @steps = steps
+    end
+
+    def self.from_json_object(o)
+      steps = o.delete("steps")
+      steps ||= []
+      steps.map! { |st| RobotStep.from_json_object(st) }
+      new(o, steps: steps)
     end
 
     def json_hash
-      @opts.merge("steps" => @steps)
+      @opts.merge("steps" => @steps.map(&:json_hash))
     end
 
     def start(opts = {})
@@ -97,14 +153,21 @@ module Ev3j
       until_opts = { "until" => { "ctype" => "Count", "count" => count } }
       body = LoopBody.new
       body.instance_eval(&block)
-      
-      step("Loop", opts.merge(until_opts).merge("body" => body.json_hash))
+
+      step("Loop", opts.merge(until_opts).merge("body" => body))
     end
-    
+
     private
 
     def step(stype, opts)
-      @steps << opts.merge("stype" => stype)
+      if stype == "Loop"
+        body = opts.delete("body")
+        step = LoopStep.new(opts.merge("stype" => stype), body)
+      else
+        step = RobotStep.new(opts.merge("stype" => stype))
+      end
+
+      @steps << step
     end
 
     def common_motor_opts(ports, opts)
