@@ -1,5 +1,9 @@
 require "json"
 
+def opts_to_s(opts)
+  opts.map {|k, v| "#{k}: #{v.inspect}"}.join(", ")
+end
+
 module Ev3j
   class Robot
     def program(&block)
@@ -25,6 +29,23 @@ module Ev3j
 
     def save_json(filename)
       File.write(filename, JSON.pretty_generate(json_hash))
+    end
+
+    def save_rb(filename)
+      File.open(filename, "w") do |f|
+        dump_rb(f)
+      end
+    end
+
+    def dump_rb(f)
+      @comments.each do |c|
+        opts = c.dup
+        text = opts.delete "text"
+        f.puts "comment \"#{text}\", #{opts_to_s(opts)}"
+      end
+      @sequences.each do |seq|
+        seq.dump_rb(f)
+      end
     end
 
     def self.from_json_file(filename)
@@ -60,6 +81,12 @@ module Ev3j
       @opts = opts
     end
 
+    def dump_rb(f)
+      opts = @opts.dup
+      method = opts.delete("stype").downcase.gsub("-", "_")
+      f.puts("#{method} #{opts_to_s opts}")
+    end
+
     def json_hash
       @opts
     end
@@ -77,6 +104,12 @@ module Ev3j
     def initialize(opts, body)
       @body = body
       super(opts)
+    end
+
+    def dump_rb(f)
+      f.puts("loop_count #{opts_to_s @opts} do")
+      @body.dump_rb(f)
+      f.puts "end"
     end
 
     def self.from_json_object(o)
@@ -105,6 +138,11 @@ module Ev3j
       }
     end
 
+    def dump_rb(f)
+      @entry.dump_rb(f, "entry")
+      f.puts "exit_from #{@exit_from.inspect}"
+    end
+
     def exit_from(val)
       @exit_from = val
     end
@@ -120,6 +158,12 @@ module Ev3j
     def initialize(opts, steps: [])
       @opts = opts
       @steps = steps
+    end
+
+    def dump_rb(f, keyword = "sequence")
+      f.puts "#{keyword}(#{opts_to_s(@opts)}) do"
+      @steps.each { |st| st.dump_rb(f) }
+      f.puts "end"
     end
 
     def self.from_json_object(o)
