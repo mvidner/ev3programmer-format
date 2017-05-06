@@ -41,7 +41,7 @@ module Ev3j
       @comments.each do |c|
         opts = c.dup
         text = opts.delete "text"
-        f.puts "comment \"#{text}\", #{opts_to_s(opts)}"
+        f.puts "comment \"#{text}\", #{opts_to_s opts}"
       end
       @sequences.each do |seq|
         seq.dump_rb(f)
@@ -283,8 +283,8 @@ module Ev3j
         {"dur" => { "dtype" => "degrees", "degrees" => opts[:degrees] } }
       elsif opts[:rotations]
         {"dur" => { "dtype" => "rotations", "rotations" => opts[:rotations] } }
-      elsif opts[:duration]
-        {"dur" => { "dtype" => "time", "seconds" => opts[:duration] } }
+      elsif opts[:seconds]
+        {"dur" => { "dtype" => "time", "seconds" => opts[:seconds] } }
       else
         {}
       end
