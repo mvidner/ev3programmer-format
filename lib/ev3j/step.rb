@@ -7,7 +7,8 @@ module Ev3j
 
     def dump_rb(f)
       method = @stype.downcase.gsub("-", "_")
-      f.puts("#{method} #{opts_to_s @opts}")
+      short_opts = Program.shorten(@opts)
+      f.puts("#{method} #{opts_to_s short_opts}")
     end
 
     def json_hash

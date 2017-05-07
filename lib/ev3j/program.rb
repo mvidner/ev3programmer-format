@@ -1,9 +1,35 @@
+require "ev3j/short_opt"
+
 module Ev3j
   class Program
     def initialize(comments: [], sequences: [])
       @comments = comments
       @sequences = sequences
     end
+
+    @@abbrevs = FuzzyShortOptSet.new
+
+    def self.abbrev(key, long)
+      @@abbrevs.add(key, long)
+    end
+
+    def self.expand(opts)
+      @@abbrevs.expand(opts)
+    end
+
+    def self.shorten(opts)
+      @@abbrevs.shorten(opts)
+    end
+
+    X = ShortOpt::X
+    abbrev(:power    , { on:  { power:    X } })
+    abbrev(:steering , { on:  { steering: X } })
+
+    abbrev(:brake    , { off: { brake:    X } })
+
+    abbrev(:degrees  , { dur: { dtype: "degrees",   degrees:   X } })
+    abbrev(:rotations, { dur: { dtype: "rotations", rotations: X } })
+    abbrev(:seconds  , { dur: { dtype: "time",      seconds:   X } })
 
     #@!group To Ruby
     def dump_rb(f)
