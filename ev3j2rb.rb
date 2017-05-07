@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 # Translate the Json to (crude) Ruby
 $: << "lib"
-require "robot"
+require "ev3j"
 
 ARGV.each do |base|
   base = base.sub(/\.ev3j$/, "")

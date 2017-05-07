@@ -2,7 +2,7 @@
 # Check that we can do a round-trip of the ev3j format
 # via the Ruby object representation
 $: << "lib"
-require "robot"
+require "ev3j"
 
 ARGV.each do |base|
   base = base.sub(/\.ev3j$/, "")

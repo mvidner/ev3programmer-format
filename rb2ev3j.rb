@@ -1,6 +1,6 @@
 #!/usr/bin/ruby
 $: << "lib"
-require "robot"
+require "ev3j"
 
 ARGV.each do |base|
   base = base.sub(/\.rb$/, "")
