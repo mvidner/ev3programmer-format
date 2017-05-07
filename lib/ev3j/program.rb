@@ -33,11 +33,7 @@ module Ev3j
 
     #@!group To Ruby
     def dump_rb(f)
-      @comments.each do |c|
-        opts = c.dup
-        text = opts.delete "text"
-        f.puts "comment \"#{text}\", #{opts_to_s opts}"
-      end
+      @comments.each { |c| c.dump_rb(f) }
       @sequences.each do |seq|
         seq.dump_rb(f, opts_in: :args)
       end
@@ -45,7 +41,7 @@ module Ev3j
 
     #@!group From Json
     def self.from_json_object(o)
-      comments = o.fetch("comments", [])
+      comments = o.fetch("comments", []).map { |jc| Comment.from_json_object(jc) }
       seqs = o["sequences"].map { |jseq| Sequence.from_json_object(jseq) }
       new(comments: comments, sequences: seqs)
     end
@@ -53,7 +49,7 @@ module Ev3j
     # @!group From Ruby
 
     def comment(text, opts = {})
-      @comments << opts.merge("text" => text)
+      @comments << Comment.new(text, opts)
     end
 
     def sequence(opts, &block)
@@ -66,7 +62,7 @@ module Ev3j
     # FIXME figure out the Ruby JSON protocol for this
     def json_hash
       {
-        "comments" => @comments,
+        "comments" => @comments.map(&:json_hash),
         "sequences" => @sequences.map(&:json_hash)
       }
     end

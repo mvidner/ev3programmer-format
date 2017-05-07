@@ -1,4 +1,5 @@
 require "ev3j/body"
+require "ev3j/comment"
 require "ev3j/condition"
 require "ev3j/program"
 require "ev3j/robot"
