@@ -1,3 +1,7 @@
+#require "ev3j/step/case_switch"
+#require "ev3j/step/if_switch"
+#require "ev3j/step/loop"
+
 module Ev3j
   class Step
     def initialize(opts, stype:)

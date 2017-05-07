@@ -6,8 +6,14 @@ module Ev3j
     end
 
     def self.from_json_object(o)
-      raise ScriptError, "not implemented: #{o}" unless o["count"]
-      new(count: o["count"])
+      case o["ctype"]
+      when "Count"
+        new(count: o["count"])
+      when "Never"
+        UntilForever.new
+      else
+        raise ScriptError, "not implemented: #{o}"
+      end
     end
 
     def json_hash
@@ -16,6 +22,18 @@ module Ev3j
 
     def dump_rb(f)
       f.print "until(count: #{@count})"
+    end
+  end
+
+  class UntilForever < Until
+    def initialize; end
+
+    def json_hash
+      { "ctype" => "Never" }
+    end
+
+    def dump_rb(f)
+      f.print "forever"
     end
   end
 end
