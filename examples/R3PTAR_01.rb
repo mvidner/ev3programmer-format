@@ -13,11 +13,9 @@ comment "You can change how far R3PTAR slithers " \
 sequence(id: "seq8", x0: 0, y0: -276) do
   start id: "8"
   large_motor :portB, power: 75.0, id: "13"
-  loop_count(3, htop: 106.0, hbot: 322.0, w: 944.0, id: "15") do
-    entry(id: "seq21") do
-      medium_motor :portA, power:  10.0, brake: false, seconds: 1.0, id: "27"
-      medium_motor :portA, power: -10.0, brake: false, seconds: 1.0, id: "30"
-    end
-    exit_from "seq21"
+  loop(htop: 106.0, hbot: 322.0, w: 944.0, id: "15").until(count: 3) do
+    id "seq21"
+    medium_motor :portA, power:  10.0, brake: false, seconds: 1.0, id: "27"
+    medium_motor :portA, power: -10.0, brake: false, seconds: 1.0, id: "30"
   end
 end

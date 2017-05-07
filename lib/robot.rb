@@ -17,7 +17,20 @@ module Ev3j
     end
 
     def save_json(filename)
-      @p.save_json(filename)
+      jh = @p.json_hash
+      File.write(filename, JSON.pretty_generate(jh))
+    end
+
+    def save_rb(filename)
+      File.open(filename, "w") do |f|
+        @p.dump_rb(f)
+      end
+    end
+
+    def json_file(filename)
+      text = File.read(filename)
+      jh = JSON.parse(text)
+      @p = RobotProgram.from_json_object(jh)
     end
   end
 
@@ -27,16 +40,7 @@ module Ev3j
       @sequences = sequences
     end
 
-    def save_json(filename)
-      File.write(filename, JSON.pretty_generate(json_hash))
-    end
-
-    def save_rb(filename)
-      File.open(filename, "w") do |f|
-        dump_rb(f)
-      end
-    end
-
+    #@!group To Ruby
     def dump_rb(f)
       @comments.each do |c|
         opts = c.dup
@@ -44,18 +48,18 @@ module Ev3j
         f.puts "comment \"#{text}\", #{opts_to_s opts}"
       end
       @sequences.each do |seq|
-        seq.dump_rb(f)
+        seq.dump_rb(f, opts_in: :args)
       end
     end
 
-    def self.from_json_file(filename)
-      from_json_object(JSON.parse(File.read(filename)))
+    #@!group From Json
+    def self.from_json_object(o)
+      comments = o.fetch("comments", [])
+      seqs = o["sequences"].map { |jseq| RobotSequence.from_json_object(jseq) }
+      new(comments: comments, sequences: seqs)
     end
 
-    def self.from_json_object(o)
-      seqs = o["sequences"].map { |jseq| RobotSequence.from_json_object(jseq) }
-      new(comments: o["comments"], sequences: seqs)
-    end
+    # @!group From Ruby
 
     def comment(text, opts = {})
       @comments << opts.merge("text" => text)
@@ -67,6 +71,7 @@ module Ev3j
       @sequences << seq
     end
 
+    # @!group To Json
     # FIXME figure out the Ruby JSON protocol for this
     def json_hash
       {
@@ -77,86 +82,115 @@ module Ev3j
   end
 
   class RobotStep
-    def initialize(opts)
+    def initialize(opts, stype:)
       @opts = opts
+      @stype = stype
     end
 
     def dump_rb(f)
-      opts = @opts.dup
-      method = opts.delete("stype").downcase.gsub("-", "_")
-      f.puts("#{method} #{opts_to_s opts}")
+      method = @stype.downcase.gsub("-", "_")
+      f.puts("#{method} #{opts_to_s @opts}")
     end
 
     def json_hash
-      @opts
+      @opts.merge("stype" => @stype)
     end
 
     def self.from_json_object(o)
-      if o["stype"] == "Loop"
+      stype = o.delete "stype"
+      case stype
+      when "Loop"
         LoopStep.from_json_object(o)
-      elsif o["stype"] == "Case-Switch"
+      when "Case-Switch"
         CaseSwitchStep.from_json_object(o)
+      when "If-Switch"
+        IfSwitchStep.from_json_object(o)
       else
-        new(o)
+        new(o, stype: stype)
       end
     end
   end
 
   class LoopStep < RobotStep
-    def initialize(opts, body)
+    def initialize(opts)
+      @body = nil
+      @opts = opts
+    end
+
+    def until=(until_)
+      @until = until_
+    end
+
+    def body=(body)
       @body = body
-      super(opts)
     end
 
     def dump_rb(f)
-      f.puts("loop_count #{opts_to_s @opts} do")
+      f.print("loop(#{opts_to_s @opts}).")
+      @until.dump_rb(f)
       @body.dump_rb(f)
-      f.puts "end"
     end
 
     def self.from_json_object(o)
       bopts = o.delete("body")
-      body = LoopBody.from_json_object(bopts)
-      new(o, body)
+      uopts = o.delete("until")
+      s = new(o)
+      s.body = Body.from_json_object(bopts)
+      s.until = Until.from_json_object(uopts)
+      s
     end
 
     def json_hash
-      @opts.merge("body" => @body.json_hash)
+      {
+        "stype" => "Loop",
+        "body"  => @body.json_hash,
+        "until" => @until.json_hash
+      }.merge(@opts)
     end
   end
 
-  class LoopBody
-    def initialize(sequences = [], entry = {}, exit_from = nil)
+  # A Body either has only one RobotSequence, in the @entry member,
+  # or it has multiple sequences, in @sequences
+  class Body
+    # for @entry, without @sequences
+    def self.with_entry
+      seq = RobotSequence.new({})
+      new(entry: seq, sequences: [], sequence: seq, exit_from: nil)
+    end
+
+    # @param sequence the one to apply block commands to
+    def initialize(entry:, sequences:, sequence:, exit_from:)
+      @entry     = entry
       @sequences = sequences
-      @entry     = RobotSequence.from_json_object(entry)
+      @sequence  = sequence
       @exit_from = exit_from
     end
 
     def self.from_json_object(o)
-      new(o["sequences"], o["entry"], o["exit_from"])
+      seqs = o["sequences"].map { |jseq| RobotSequence.from_json_object(jseq) }
+      entry = RobotSequence.from_json_object(o["entry"])
+      exit_from = o["exit_from"]
+      new(entry: entry, sequences: seqs, sequence: entry, exit_from: exit_from)
     end
 
     def json_hash
       {
         "entry"     => @entry.json_hash,
-        "exit_from" => @exit_from,
+        "exit_from" => @exit_from || @sequence.id,
         "sequences" => @sequences.map(&:json_hash)
       }
     end
 
-    def dump_rb(f, keyword = "entry")
-      @entry.dump_rb(f, keyword)
-      f.puts "exit_from #{@exit_from.inspect}"
+    def dump_rb(f)
+      if @sequences.empty?
+        @entry.dump_rb(f, opts_in: :block)
+      else
+        raise "TODO"
+      end
     end
 
-    def exit_from(val)
-      @exit_from = val
-    end
-
-    def entry(opts, &block)
-      seq = RobotSequence.new(opts)
-      seq.instance_eval(&block)
-      @entry = seq
+    def sequence
+      @sequence
     end
   end
 
@@ -164,7 +198,7 @@ module Ev3j
     def self.from_json_object(o)
       cases = o.delete("cases").map do |c|
         cwhen = c["when"]
-        cthen = LoopBody.from_json_object(c["then"])
+        cthen = Body.from_json_object(c["then"])
         [cwhen, cthen]
       end
       new(o, Hash[cases])
@@ -190,15 +224,20 @@ module Ev3j
       @steps = steps
     end
 
-    def dump_rb(f, keyword = "sequence")
-      f.puts "#{keyword}(#{opts_to_s(@opts)}) do"
+    def dump_rb(f, opts_in:)
+      case opts_in
+      when :args
+        f.puts("sequence(#{opts_to_s @opts}) do")
+      when :block
+        f.puts " do"
+        f.puts "id #{id.inspect}"
+      end
       @steps.each { |st| st.dump_rb(f) }
       f.puts "end"
     end
 
     def self.from_json_object(o)
       steps = o.delete("steps")
-      steps ||= []
       steps.map! { |st| RobotStep.from_json_object(st) }
       new(o, steps: steps)
     end
@@ -207,42 +246,98 @@ module Ev3j
       @opts.merge("steps" => @steps.map(&:json_hash))
     end
 
+    def add_step(step)
+      @steps << step
+    end
+
+    # both a getter and a setter in one method
+    def id(i = nil)
+      if i
+        @opts["id"] = i
+      else
+        @opts["id"]
+      end
+    end
+
     def start(opts = {})
-      step("Start", opts)
+      @steps << RobotStep.new(opts, stype: "Start")
     end
 
     def move_steering(ports, opts = {})
-      step("Move-Steering", common_motor_opts(ports, opts))
+      @steps << MotorStep.new("Move-Steering", ports, opts)
     end
 
     def large_motor(port, opts = {})
-      step("Large-Motor", common_motor_opts(port, opts))
+      @steps << MotorStep.new("Large-Motor", port, opts)
     end
 
     def medium_motor(port, opts = {})
-      step("Medium-Motor", common_motor_opts(port, opts))
+      @steps << MotorStep.new("Medium-Motor", port, opts)
     end
 
-    def loop_count(count, opts = {}, &block)
-      until_opts = { "until" => { "ctype" => "Count", "count" => count } }
-      body = LoopBody.new
-      body.instance_eval(&block)
+    class LoopStatement
+      def initialize(sequence, loop_step)
+        @sequence = sequence
+        @step = loop_step
+      end
 
-      step("Loop", opts.merge(until_opts).merge("body" => body))
+      def until(opts, &block)
+        @step.until = Until.new(opts)
+        body = Body.with_entry
+        @step.body = body
+        body.sequence.instance_eval(&block)
+        @sequence.add_step(@step)
+      end
+    end
+
+    def loop(opts = {})
+      step = LoopStep.new(opts)
+      # a chained .until call will add the LoopStep to our @steps
+      LoopStatement.new(self, step)
+    end
+  end
+
+  class Cond
+    def self.from_json_object(o)
+      new(o)
+    end
+
+    def initialize(opts)
+      @opts = opts
+    end
+
+    def dump_rb(f)
+      f.puts "cond(#{opts_to_s @opts})"
+    end
+  end
+
+  class Until < Cond
+    def initialize(opts)
+      raise ScriptError, "not implemented: #{opts}" unless opts[:count]
+      @count = opts[:count]
+    end
+
+    def self.from_json_object(o)
+      raise ScriptError, "not implemented: #{o}" unless o["count"]
+      new(count: o["count"])
+    end
+
+    def json_hash
+      { "ctype" => "Count", "count" => @count }
+    end
+
+    def dump_rb(f)
+      f.print "until(count: #{@count})"
+    end
+  end
+
+  class MotorStep < RobotStep
+    def initialize(stype, port_sym, short_opts)
+      @stype = stype
+      @opts = common_motor_opts(port_sym, short_opts)
     end
 
     private
-
-    def step(stype, opts)
-      if stype == "Loop"
-        body = opts.delete("body")
-        step = LoopStep.new(opts.merge("stype" => stype), body)
-      else
-        step = RobotStep.new(opts.merge("stype" => stype))
-      end
-
-      @steps << step
-    end
 
     def common_motor_opts(ports, opts)
       step_opts = {
@@ -288,6 +383,32 @@ module Ev3j
       else
         {}
       end
+    end
+  end
+
+  class IfSwitchStep < RobotStep
+    def self.from_json_object(o)
+      cond = Cond.from_json_object(o.delete("cond"))
+      cthen = Body.from_json_object(o.delete "then")
+      celse = Body.from_json_object(o.delete "else")
+      new(o, cond, cthen, celse)
+    end
+
+    def initialize(opts, cond, cthen, celse)
+      @opts = opts
+      @cond = cond
+      @then = cthen
+      @else = celse
+    end
+
+    def dump_rb(f)
+      f.puts "if_switch(#{opts_to_s @opts}).cond do"
+      @cond.dump_rb(f)
+      f.puts "end.then do"
+      @then.dump_rb(f)
+      f.puts "end.else do"
+      @else.dump_rb(f)
+      f.puts "end"
     end
   end
 end
