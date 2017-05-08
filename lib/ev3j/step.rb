@@ -12,7 +12,9 @@ module Ev3j
     def dump_rb(f)
       method = @stype.downcase.gsub("-", "_")
       short_opts = Program.shorten(@opts)
-      f.puts("#{method} #{opts_to_s short_opts}")
+      sym_arg, short_opts = symize(short_opts)
+      sym_arg_s = sym_arg ? "#{sym_arg.inspect}, " : ""
+      f.puts "#{method} #{sym_arg_s}#{opts_to_s short_opts}"
     end
 
     def json_hash
@@ -30,6 +32,21 @@ module Ev3j
         Step::IfSwitch.from_json_object(o)
       else
         new(o, stype: stype)
+      end
+    end
+
+    private
+
+    # @param [Hash] opts
+    # @return [pair Symbol|nil, Hash]
+    def symize(opts)
+      new_opts = opts.dup
+      port = new_opts.delete("port")
+      if port
+        sym = "port#{port}".to_sym
+        [sym, new_opts]
+      else
+        [nil, opts]
       end
     end
   end
