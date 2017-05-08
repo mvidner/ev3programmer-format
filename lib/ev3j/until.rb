@@ -1,19 +1,20 @@
 module Ev3j
   class Until < Condition
-    def initialize(opts)
-      raise ScriptError, "not implemented: #{opts}" unless opts[:count]
-      @count = opts[:count]
-    end
-
     def self.from_json_object(o)
       case o["ctype"]
       when "Count"
-        new(count: o["count"])
+        UntilCount.new(o["count"])
       when "Never"
         UntilForever.new
       else
-        raise ScriptError, "not implemented: #{o}"
+        Condition.from_json_object(o)
       end
+    end
+  end
+
+  class UntilCount < Until
+    def initialize(count)
+      @count = count
     end
 
     def json_hash
@@ -21,7 +22,7 @@ module Ev3j
     end
 
     def dump_rb(f)
-      f.print "until(count: #{@count})"
+      f.print "count(#{@count})"
     end
   end
 

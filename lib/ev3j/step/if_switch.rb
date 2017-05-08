@@ -16,11 +16,11 @@ module Ev3j
       end
 
       def dump_rb(f)
-        f.puts "if_switch(#{opts_to_s @opts})"
+        f.print "if_switch(#{opts_to_s @opts})"
         f.print "."
         @cond.dump_rb(f)
         f.print ".then"
-        @then.dump_rb(f)
+        @then.dump_rb(f, chain_else: true)
         f.print ".else"
         @else.dump_rb(f)
       end

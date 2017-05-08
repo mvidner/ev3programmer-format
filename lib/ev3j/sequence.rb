@@ -5,7 +5,7 @@ module Ev3j
       @steps = steps
     end
 
-    def dump_rb(f, opts_in:)
+    def dump_rb(f, opts_in:, chain_else: false)
       case opts_in
       when :args
         f.puts("sequence(#{opts_to_s @opts}) do")
@@ -14,7 +14,8 @@ module Ev3j
         f.puts "id #{id.inspect}"
       end
       @steps.each { |st| st.dump_rb(f) }
-      f.puts "end"
+      f.print "end"
+      f.puts unless chain_else
     end
 
     def self.from_json_object(o)
@@ -62,8 +63,18 @@ module Ev3j
         @step = loop_step
       end
 
-      def until(opts, &block)
-        @step.until = Until.new(opts)
+      def count(n, &block)
+        until_block(UntilCount.new(n), &block)
+      end
+
+      def forever(&block)
+        until_block(UntilForever.new, &block)
+      end
+
+      private
+
+      def until_block(until_, &block)
+        @step.until = until_
         body = Body.with_entry
         @step.body = body
         body.sequence.instance_eval(&block)

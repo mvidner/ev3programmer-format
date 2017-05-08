@@ -31,11 +31,18 @@ module Ev3j
       }
     end
 
-    def dump_rb(f)
+    def dump_rb(f, chain_else: false)
       if @sequences.empty?
-        @entry.dump_rb(f, opts_in: :block)
+        @entry.dump_rb(f, opts_in: :block, chain_else: chain_else)
       else
-        raise "TODO"
+        f.puts ".body do"
+        f.puts "entry do"
+        @entry.dump_rb(f, opts_in: :block)
+        f.puts "end"
+        @sequences.each do |seq|
+          seq.dump_rb(f, opts_in: :args)
+        end
+        f.puts "end"
       end
     end
 
