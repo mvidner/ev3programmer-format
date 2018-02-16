@@ -1,4 +1,5 @@
 module Ev3j
+  # A sequence of {Step}s
   class Sequence
     def initialize(opts, steps: [])
       @opts = opts

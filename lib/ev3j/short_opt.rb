@@ -1,6 +1,6 @@
 module Ev3j
   class ShortOpt
-    # placeholder constant
+    # A placeholder constant
     class X; end
 
     # @param key
@@ -31,7 +31,7 @@ module Ev3j
 
     private
 
-    # @return pair (Bool matched, nil or value of X)
+    # @return [(Boolean,Object)] pair (matched, nil or value of X)
     def hash_match(needle_h, haystack_h)
       x = nil
       needle_h.each_pair do |k, v|
@@ -43,7 +43,7 @@ module Ev3j
       [true, x]
     end
 
-    # @return pair (Bool matched, nil or value of X)
+    # @return [(Boolean,Object)] pair (matched, nil or value of X)
     def value_match(needle_v, haystack_v)
       if needle_v == haystack_v
         [true, nil]
@@ -67,6 +67,7 @@ module Ev3j
     end
   end
 
+  # A set of {ShortOpt}s
   class ShortOptSet
     def initialize
       @all = []
@@ -91,6 +92,7 @@ module Ev3j
     end
   end
 
+  # A set of {ShortOpt}s that does not care if the keys are strings or symbols
   class FuzzyShortOptSet < ShortOptSet
     def add(key, long)
       @all << ShortOpt.new(key, long)

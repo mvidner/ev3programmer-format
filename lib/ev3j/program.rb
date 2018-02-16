@@ -1,6 +1,8 @@
 require "ev3j/short_opt"
 
 module Ev3j
+  # A Program is one or more {Sequence}s of {Step}s, and optionally some
+  # {Comment}s.
   class Program
     def initialize(comments: [], sequences: [])
       @comments = comments
@@ -31,7 +33,8 @@ module Ev3j
     abbrev(:rotations, { dur: { dtype: "rotations", rotations: X } })
     abbrev(:seconds  , { dur: { dtype: "time",      seconds:   X } })
 
-    #@!group To Ruby
+    # @!group To Ruby
+    # @param f [IO] a writable IO
     def dump_rb(f)
       @comments.each { |c| c.dump_rb(f) }
       @sequences.each do |seq|
@@ -39,7 +42,8 @@ module Ev3j
       end
     end
 
-    #@!group From Json
+    # @!group From Json
+    # @param o [Hash] a certain deserialized JSON; schema: Ev3j
     def self.from_json_object(o)
       comments = o.fetch("comments", []).map { |jc| Comment.from_json_object(jc) }
       seqs = o["sequences"].map { |jseq| Sequence.from_json_object(jseq) }
@@ -59,7 +63,7 @@ module Ev3j
     end
 
     # @!group To Json
-    # FIXME figure out the Ruby JSON protocol for this
+    # @return [Hash] a certain deserialized JSON; schema: Ev3j
     def json_hash
       {
         "comments" => @comments.map(&:json_hash),

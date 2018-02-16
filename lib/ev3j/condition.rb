@@ -26,6 +26,7 @@ module Ev3j
       new(source: source, comparison: o["comparison"], threshold: o["threshold"])
     end
 
+    # @param source [Value]
     def initialize(source:, comparison:, threshold:)
       @source = source
       @comparison = comparison
@@ -44,6 +45,7 @@ module Ev3j
       new(source: source, is_in: o["is_in"])
     end
 
+    # @param source [Value]
     def initialize(source:, is_in:)
       @source = source
       @is_in = is_in

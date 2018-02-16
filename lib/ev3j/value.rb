@@ -28,9 +28,11 @@ module Ev3j
   end
 
   class BrickButtonsCheck < Value
+    # @param check [String] "pressed" or (?)
+    # @param buttons [Array<Integer>]
     def initialize(check:, buttons:)
-      @check = check # String
-      @buttons = buttons # Array[Integer]
+      @check = check
+      @buttons = buttons
     end
 
     def dump_rb(f)
