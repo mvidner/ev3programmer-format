@@ -1,6 +1,8 @@
 module Ev3j
   class Step
     class Loop < Step
+      attr :opts
+
       def initialize(opts)
         @body = nil
         @opts = opts
@@ -15,9 +17,17 @@ module Ev3j
       end
 
       def dump_rb(f)
-        f.print("loop(#{opts_to_s @opts}).")
+        f.print("loop(#{opts_s}).")
         @until.dump_rb(f)
         @body.dump_rb(f)
+      end
+
+      def opt_order
+        %w(htop hbot w id)
+      end
+
+      def opts_s
+        opt_order.map { |k| "#{k}: #{opts[k].inspect}" }.join(", ")
       end
 
       def self.from_json_object(o)

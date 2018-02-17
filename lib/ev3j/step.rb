@@ -38,7 +38,7 @@ module Ev3j
     private
 
     # @param [Hash] opts
-    # @return [pair Symbol|nil, Hash]
+    # @return [pair Symbol|nil, Hash] [port, remaining opts]
     def symize(opts)
       new_opts = opts.dup
       port = new_opts.delete("port")
