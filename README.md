@@ -1,7 +1,9 @@
 # EV3 Programmer Ruby Representation
 
 Lego Mindstorms EV3 can be programmed in various ways, one of them being
-the "EV3 Programmer" for Android tablets.
+the "[EV3 Programmer][app]" for Android tablets.
+
+[app]: https://play.google.com/store/apps/details?id=com.lego.mindstorms.ev3programmer
 
 EV3 Programmer saves the programs in an EV3A format which is a thinly wrapped
 JSON format. This library provides a Ruby based language to represent EV3A,
